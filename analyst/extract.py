@@ -52,14 +52,18 @@ class Filing(BaseModel):
 
 
 def extract(text: str) -> dict:
-    client = genai.Client()
-    result =client.models.generate_content(
-            model=os.environ["GEMINI_MODEL"],
-            contents=f"need to extract ceo name company name and fiscal year end from the following text: {text}",
-            config=types.GenerateContentConfig(response_mime_type="application/json",response_schema=Filing),
-        )
-    print(f"Prompt tokens: {result.usage_metadata.prompt_token_count}, Candidates tokens: {result.usage_metadata.candidates_token_count}")
-    return result.parsed.model_dump(mode="json")
+    client = genai.Client(http_options=types.HttpOptions(retry_options=types.HttpRetryOptions()))
+    for attempt in range(5):
+        result =client.models.generate_content(
+                model=os.environ["GEMINI_MODEL"],
+                contents=f"need to extract ceo name company name and fiscal year end from the following text: {text}",
+                config=types.GenerateContentConfig(response_mime_type="application/json",response_schema=Filing),
+            )
+        print(f"Prompt tokens: {result.usage_metadata.prompt_token_count}, Candidates tokens: {result.usage_metadata.candidates_token_count}")
+        if result.parsed is not None:
+            return result.parsed.model_dump(mode="json")
+        print(f"Attempt {attempt + 1} failed: {(result.text or '')[:100]!r}")
+    raise RuntimeError("extract failed 5 times")
 
 
 if __name__ == "__main__":
