@@ -116,6 +116,14 @@ def facts(ticker: str) -> dict:
     return json.loads(raw)
 
 
+def load(ticker: str, year: int) -> str:
+    """One filing's text, by ticker and filing year. Must already be cached."""
+    hits = sorted((DATA / "filings").glob(f"{ticker}-{year}-*.htm"))
+    if not hits:
+        raise FileNotFoundError(f"no cached filing for {ticker} {year}")
+    return to_text(hits[0].read_text(encoding="utf-8", errors="replace"))
+
+
 def documents():
     """Yields (ticker, filing_date, text) for every cached filing."""
     for ticker in sorted(COMPANIES):
